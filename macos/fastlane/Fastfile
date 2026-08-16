@@ -1,0 +1,65 @@
+default_platform(:mac)
+
+require "pathname"
+
+PROJECT_ROOT = File.expand_path("../..", __dir__)
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_content: ENV.fetch("ASC_PRIVATE_KEY_BASE64"),
+    is_key_content_base64: true
+  )
+end
+
+def bool_env(name, default_value)
+  value = ENV[name]
+  return default_value if value.nil? || value.empty?
+
+  ["1", "true", "yes", "y"].include?(value.downcase)
+end
+
+def project_path(env_name, default_relative_path)
+  value = ENV[env_name]
+  value = default_relative_path if value.nil? || value.empty?
+
+  path = Pathname.new(value)
+  return value if path.absolute?
+
+  File.expand_path(value, PROJECT_ROOT)
+end
+
+platform :mac do
+  desc "Upload existing macOS PKG to App Store Connect draft"
+  lane :upload_beta do
+    pkg_path = project_path("MACOS_PKG_PATH", "build/macos/tabflow.pkg")
+    UI.user_error!("macOS PKG not found: #{pkg_path}") unless File.exist?(pkg_path)
+
+    upload_to_app_store(
+      api_key: asc_api_key,
+      pkg: pkg_path,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Upload existing macOS PKG to App Store Connect"
+  lane :upload_release do
+    pkg_path = project_path("MACOS_PKG_PATH", "build/macos/tabflow.pkg")
+    UI.user_error!("macOS PKG not found: #{pkg_path}") unless File.exist?(pkg_path)
+
+    upload_to_app_store(
+      api_key: asc_api_key,
+      pkg: pkg_path,
+      skip_metadata: bool_env("ASC_SKIP_METADATA", true),
+      skip_screenshots: bool_env("ASC_SKIP_SCREENSHOTS", true),
+      submit_for_review: bool_env("ASC_SUBMIT_FOR_REVIEW", false),
+      automatic_release: bool_env("ASC_AUTOMATIC_RELEASE", false),
+      run_precheck_before_submit: false
+    )
+  end
+end

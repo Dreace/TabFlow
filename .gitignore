@@ -1,0 +1,21 @@
+.DS_Store
+.env
+**/xcuserdata/
+**/*.xcuserstate
+Distribution/DMG/background.png
+Distribution/DMG/background@2x.png
+Distribution/DMG/background.tiff
+macos/.env
+build/
+macos/vendor/bundle/
+macos/fastlane/report.xml
+macos/fastlane/README.md
+产品介绍页设计.md
+产品文档.md
+技术方案.md
+页面布局.md
+DMG 打包.md
+DMG 优化.md
+docs/实现审查报告.md
+docs/RELEASE_UPLOAD.md
+docs/SCREENSHOT_WORKFLOW.md

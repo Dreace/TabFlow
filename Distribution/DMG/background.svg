@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="420" viewBox="0 0 660 420">
+    <rect width="660" height="420" fill="#F5F5F7"/>
+    <path
+        d="M285 160 H365"
+        fill="none"
+        stroke="#8E8E93"
+        stroke-width="3"
+        stroke-linecap="round"/>
+    <path
+        d="M353 148 L365 160 L353 172"
+        fill="none"
+        stroke="#8E8E93"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+    <text
+        x="330"
+        y="275"
+        text-anchor="middle"
+        font-family="Helvetica Neue, Helvetica, Arial"
+        font-size="15"
+        fill="#6E6E73">
+        Drag TabFlow to Applications
+    </text>
+</svg>
