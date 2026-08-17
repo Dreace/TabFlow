@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/Dreace/TabFlow/releases/latest"><img alt="Download" src="https://img.shields.io/badge/download-latest-brightgreen?style=flat-square"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS-blue?style=flat-square">
-  <img alt="Requirements" src="https://img.shields.io/badge/requirements-macOS%2015.7%2B-fa4e49?style=flat-square">
+  <img alt="Requirements" src="https://img.shields.io/badge/requirements-macOS%2014.0%2B-fa4e49?style=flat-square">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square"></a>
 </p>
 
@@ -82,7 +82,7 @@ Window information and thumbnails stay on the Mac.
 
 ## Requirements
 
-* macOS 15.7 or later
+* macOS 14.0 or later
 
 ## Build
 
