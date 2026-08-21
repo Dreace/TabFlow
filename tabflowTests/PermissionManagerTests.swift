@@ -41,4 +41,19 @@ final class PermissionManagerTests: XCTestCase {
             "com.apple.accessibility.api"
         )
     }
+
+    func testInputMonitoringUsesListenEventAccess() {
+        XCTAssertEqual(
+            InputMonitoringReading.state(listenAccessRawValue: 0),
+            .granted
+        )
+        XCTAssertEqual(
+            InputMonitoringReading.state(listenAccessRawValue: 1),
+            .denied
+        )
+        XCTAssertEqual(
+            InputMonitoringReading.state(listenAccessRawValue: 2),
+            .denied
+        )
+    }
 }

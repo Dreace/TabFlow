@@ -1,1 +1,2 @@
+"NSInputMonitoringUsageDescription" = "TabFlow 需要输入监控权限，才能在其他应用中响应全局快捷键，包括覆盖 Command-Tab。";
 "NSScreenCaptureUsageDescription" = "TabFlow 使用屏幕录制权限生成窗口缩略图预览。拒绝授权后仍可使用图标和标题切换窗口。";

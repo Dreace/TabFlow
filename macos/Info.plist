@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSInputMonitoringUsageDescription</key>
+	<string>TabFlow uses Input Monitoring to handle the global shortcut, including Command-Tab, while other apps are active.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>TabFlow captures window thumbnails to show previews in the switcher. Switching still works if you decline.</string>
 </dict>

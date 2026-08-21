@@ -69,22 +69,30 @@ final class SettingsViewModel {
     var activeAboutSheet: AboutSheet?
     var showsDiagnosticPreview = false
     var diagnosticReport = ""
+    var shortcutRegisteredElsewhere = false
 
     private let onMenuBarVisibilityChanged: (Bool) -> Void
     private let onClearThumbnails: () -> Void
+    private let onShortcutRecordingChange: (Bool) -> Void
+    private let hotKeyProbe: HotKeyRegistrationProbing
 
     init(
         settings: AppSettings,
         permissions: PermissionManager,
+        hotKeyProbe: HotKeyRegistrationProbing = CarbonHotKeyProbe(),
         onMenuBarVisibilityChanged: @escaping (Bool) -> Void,
-        onClearThumbnails: @escaping () -> Void
+        onClearThumbnails: @escaping () -> Void,
+        onShortcutRecordingChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.settings = settings
         self.permissions = permissions
+        self.hotKeyProbe = hotKeyProbe
         self.onMenuBarVisibilityChanged = onMenuBarVisibilityChanged
         self.onClearThumbnails = onClearThumbnails
+        self.onShortcutRecordingChange = onShortcutRecordingChange
         isLaunchAtLoginEnabled = SMAppService.mainApp.status == .enabled
         refreshAvailableDisplays()
+        refreshShortcutConflictProbe()
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {
@@ -130,21 +138,64 @@ final class SettingsViewModel {
     }
 
     var shortcutStatus: (text: String, systemImage: String, tint: NSColor)? {
-        if settings.shortcut.hasKnownSystemConflict {
+        switch shortcutConflict {
+        case .none:
+            guard settings.shortcut.isConfigured else { return nil }
+            if !permissions.eventTapAvailable {
+                return (
+                    String(localized: "settings.shortcuts.availabilityUnknown"),
+                    "questionmark.circle",
+                    .secondaryLabelColor
+                )
+            }
             return (
-                String(localized: "settings.shortcuts.systemConflict"),
+                String(localized: "settings.shortcuts.conflict.none"),
+                "checkmark.circle",
+                .secondaryLabelColor
+            )
+        case .tabFlow(let name):
+            return (
+                String(
+                    format: String(localized: "settings.shortcuts.conflict.tabFlow.format"),
+                    locale: .current,
+                    name
+                ),
+                "exclamationmark.triangle.fill",
+                .systemOrange
+            )
+        case .knownSystem(let reason):
+            return (
+                reason,
+                "exclamationmark.triangle.fill",
+                .systemOrange
+            )
+        case .registeredElsewhere:
+            return (
+                String(localized: "settings.shortcuts.conflict.registeredElsewhere"),
                 "exclamationmark.triangle.fill",
                 .systemOrange
             )
         }
-        if !permissions.eventTapAvailable {
-            return (
-                String(localized: "settings.shortcuts.availabilityUnknown"),
-                "questionmark.circle",
-                .secondaryLabelColor
-            )
-        }
-        return nil
+    }
+
+    var shortcutConflict: ShortcutConflict {
+        ShortcutConflictDetector.conflict(
+            for: settings.shortcut,
+            registeredElsewhere: shortcutRegisteredElsewhere
+        )
+    }
+
+    func refreshPermissions() {
+        permissions.refresh()
+        settings.onShortcutConfigurationChange?()
+    }
+
+    func setShortcutRecording(_ isRecording: Bool) {
+        onShortcutRecordingChange(isRecording)
+    }
+
+    func refreshShortcutConflictProbe() {
+        shortcutRegisteredElsewhere = hotKeyProbe.isRegisteredElsewhere(settings.shortcut)
     }
 
     func refreshAvailableDisplays() {

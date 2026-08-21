@@ -24,8 +24,14 @@ struct SettingsRootView: View {
         .preferredColorScheme(preferredColorScheme)
         .onChange(of: model.selectedSection) { _, section in
             if section == .permissions {
-                model.permissions.refresh()
+                model.refreshPermissions()
             }
+            if section == .shortcuts {
+                model.refreshShortcutConflictProbe()
+            }
+        }
+        .onChange(of: model.settings.shortcut) { _, _ in
+            model.refreshShortcutConflictProbe()
         }
         .alert("settings.reset.confirm.title", isPresented: $model.confirmsReset) {
             Button("action.cancel", role: .cancel) {}
@@ -124,12 +130,17 @@ struct SettingsRootView: View {
         Group {
             Section("settings.shortcuts.primary") {
                 LabeledContent("settings.shortcuts.forward") {
-                    ShortcutRecorder(shortcut: $model.settings.shortcut)
+                    ShortcutRecorder(
+                        shortcut: $model.settings.shortcut,
+                        onRecordingChange: model.setShortcutRecording
+                    )
                         .frame(width: 150)
                 }
                 LabeledContent(
                     "settings.shortcuts.backward",
-                    value: model.settings.shortcut.displayName + " ⇧"
+                    value: model.settings.shortcut.isConfigured
+                        ? model.settings.shortcut.displayName + " ⇧"
+                        : String(localized: "shortcut.none")
                 )
                 if let shortcutStatus = model.shortcutStatus {
                     Label(
@@ -300,7 +311,7 @@ struct SettingsRootView: View {
                 }
             )
             Section {
-                Button("permissions.refresh", action: model.permissions.refresh)
+                Button("permissions.refresh", action: model.refreshPermissions)
             }
         }
     }

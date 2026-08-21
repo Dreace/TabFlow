@@ -247,7 +247,7 @@ struct SwitcherOverlayView: View {
             .scrollIndicators(.never)
             .onChange(of: model.session.selectedWindow?.id) { _, selectedID in
                 guard let selectedID else { return }
-                proxy.scrollTo(selectedID, anchor: .center)
+                proxy.scrollTo(selectedID, anchor: nil)
             }
         }
         .frame(
@@ -284,7 +284,7 @@ struct SwitcherOverlayView: View {
             .scrollIndicators(.never)
             .onChange(of: model.session.selectedWindow?.id) { _, selectedID in
                 guard let selectedID else { return }
-                proxy.scrollTo(selectedID, anchor: .center)
+                proxy.scrollTo(selectedID, anchor: nil)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: 640)
@@ -324,7 +324,7 @@ struct SwitcherOverlayView: View {
             .scrollIndicators(.never)
             .onChange(of: model.session.selectedWindow?.id) { _, selectedID in
                 guard let selectedID else { return }
-                proxy.scrollTo(selectedID, anchor: .center)
+                proxy.scrollTo(selectedID, anchor: nil)
             }
         }
         .frame(minWidth: 420, maxWidth: .infinity, maxHeight: 520)
@@ -359,6 +359,7 @@ struct WindowGridCard: View {
     let index: Int
     let settings: AppSettings?
     let cardWidth: CGFloat
+    @State private var isHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.compactSpacing) {
@@ -391,12 +392,14 @@ struct WindowGridCard: View {
         }
         .padding(DesignTokens.compactSpacing)
         .frame(width: cardWidth)
-        .background(isSelected ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.06))
+        .background(DesignTokens.cardBackground(isSelected: isSelected, isHovered: isHovered))
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cardCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: DesignTokens.cardCornerRadius, style: .continuous)
-                .strokeBorder(isSelected ? DesignTokens.selectionColor : .clear, lineWidth: 3)
+                .strokeBorder(isSelected ? DesignTokens.selectionColor : .clear, lineWidth: 1.5)
         }
+        .contentShape(RoundedRectangle(cornerRadius: DesignTokens.cardCornerRadius, style: .continuous))
+        .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
@@ -456,6 +459,7 @@ struct WindowListRow: View {
     let isSelected: Bool
     let index: Int
     let settings: AppSettings?
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: DesignTokens.compactSpacing) {
@@ -488,12 +492,14 @@ struct WindowListRow: View {
             minHeight: settings?.showsWindowStatus != false ? 64 : 44,
             alignment: .leading
         )
-        .background(isSelected ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.06))
+        .background(DesignTokens.cardBackground(isSelected: isSelected, isHovered: isHovered))
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(isSelected ? DesignTokens.selectionColor : .clear, lineWidth: 2)
+                .strokeBorder(isSelected ? DesignTokens.selectionColor : .clear, lineWidth: 1)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(
             String(

@@ -2,12 +2,34 @@ import ApplicationServices
 import AppKit
 import CoreGraphics
 import Foundation
+import IOKit.hid
 import Observation
 
-enum PermissionState {
+enum PermissionState: Equatable {
     case granted
     case denied
     case unavailable
+}
+
+/// Input Monitoring is TCC ListenEvent, shown in System Settings as that pane.
+nonisolated enum InputMonitoringReading {
+    static func state(listenAccessRawValue: Int) -> PermissionState {
+        listenAccessRawValue == 0 ? .granted : .denied
+    }
+
+    static func currentState() -> PermissionState {
+        state(listenAccessRawValue: Int(IOHIDCheckAccess(kIOHIDRequestTypeListenEvent).rawValue))
+    }
+}
+
+nonisolated enum InputMonitoringRegistration {
+    /// Register the process with TCC's ListenEvent service before opening
+    /// System Settings. Accessibility can satisfy event taps without creating
+    /// a separate Input Monitoring list item.
+    @discardableResult
+    static func requestAccess() -> Bool {
+        IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+    }
 }
 
 nonisolated enum AccessibilityTrustReading {
@@ -60,7 +82,7 @@ final class PermissionManager {
             processTrusted: accessibilityIsGranted(prompting: false),
             systemWideAttributeError: AccessibilityTrustReading.systemWideProbeError()
         ) ? .granted : .denied
-        inputMonitoring = CGPreflightListenEventAccess() ? .granted : .denied
+        inputMonitoring = InputMonitoringReading.currentState()
         screenRecording = CGPreflightScreenCaptureAccess() ? .granted : .denied
     }
 
@@ -88,7 +110,8 @@ final class PermissionManager {
     }
 
     func requestInputMonitoring() {
-        inputMonitoring = CGRequestListenEventAccess() ? .granted : .denied
+        _ = InputMonitoringRegistration.requestAccess()
+        inputMonitoring = InputMonitoringReading.currentState()
     }
 
     func requestScreenRecording() {
@@ -97,9 +120,6 @@ final class PermissionManager {
 
     func setEventTapAvailable(_ available: Bool) {
         eventTapAvailable = available
-        if !available, inputMonitoring == .granted {
-            inputMonitoring = .unavailable
-        }
     }
 
     func openAccessibilitySettings() {

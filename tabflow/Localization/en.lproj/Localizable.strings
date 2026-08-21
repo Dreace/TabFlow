@@ -45,9 +45,11 @@
 "overlay.keyboardHint.searchField" = "Tab next    Shift+Tab previous    Return confirm    Esc cancel";
 "overlay.keyboardHint.searchField.accessibility" = "Press Tab for next, Shift Tab for previous, Return to confirm, or Escape to cancel.";
 
-"shortcut.recording" = "Type shortcut…";
+"shortcut.recording" = "Press shortcut…";
 "shortcut.recorder.accessibility" = "Global shortcut recorder";
+"shortcut.recorder.help" = "Click, then press a shortcut. Escape cancels. Delete clears.";
 "shortcut.keyCode.format" = "Key %lld";
+"shortcut.none" = "None";
 
 "permissions.accessibility" = "Accessibility";
 "permissions.input" = "Input Monitoring";
@@ -89,7 +91,15 @@
 "settings.shortcuts.confirmWithReturn" = "Allow Return to Confirm";
 "settings.shortcuts.escape" = "Escape Cancels";
 "settings.shortcuts.arrows" = "Navigate with Arrow Keys";
-"settings.shortcuts.systemConflict" = "This shortcut conflicts with a reserved macOS shortcut. Choose another combination.";
+"settings.shortcuts.conflict.none" = "No known conflicts";
+"settings.shortcuts.conflict.appSwitcher" = "macOS usually uses this shortcut to switch apps.";
+"settings.shortcuts.conflict.spotlight" = "macOS usually uses this shortcut for Spotlight.";
+"settings.shortcuts.conflict.missionControl" = "macOS usually uses this shortcut for Mission Control.";
+"settings.shortcuts.conflict.appExpose" = "macOS usually uses this shortcut for App Exposé.";
+"settings.shortcuts.conflict.spaceLeft" = "macOS usually uses this shortcut to move left a Space.";
+"settings.shortcuts.conflict.spaceRight" = "macOS usually uses this shortcut to move right a Space.";
+"settings.shortcuts.conflict.registeredElsewhere" = "This shortcut may already be registered by another app.";
+"settings.shortcuts.conflict.tabFlow.format" = "This shortcut is already used for %@.";
 "settings.shortcuts.availabilityUnknown" = "The global listener is unavailable, so this shortcut cannot be verified yet.";
 
 "settings.appearance.layout" = "Layout";
@@ -183,7 +193,6 @@
 "onboarding.shortcut.description" = "Press Option+Tab once to confirm the global shortcut. Hold Shift as well to move backward after setup.";
 "onboarding.shortcut.waiting" = "Waiting for the shortcut…";
 "onboarding.shortcut.succeeded" = "Shortcut recognized";
-"onboarding.shortcut.conflict" = "This shortcut conflicts with a reserved macOS shortcut. Choose another combination.";
 "onboarding.shortcut.unavailable" = "The global shortcut is not available yet. Check Input Monitoring and try again.";
 "onboarding.shortcut.retest" = "Test Again";
 "onboarding.thumbnails.title" = "Window Previews Are Optional";

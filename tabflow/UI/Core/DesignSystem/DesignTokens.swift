@@ -11,6 +11,13 @@ enum DesignTokens {
     static let searchFieldBackground = Color(nsColor: .textBackgroundColor)
     static let searchFieldStroke = Color.primary.opacity(0.22)
 
+    static func cardBackground(isSelected: Bool, isHovered: Bool) -> Color {
+        if isSelected {
+            return Color.accentColor.opacity(isHovered ? 0.24 : 0.16)
+        }
+        return Color.primary.opacity(isHovered ? 0.12 : 0.06)
+    }
+
     static func cardWidth(for size: CardSize) -> CGFloat {
         switch size {
         case .small: 176

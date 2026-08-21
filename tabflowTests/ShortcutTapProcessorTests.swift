@@ -84,8 +84,89 @@ final class ShortcutTapProcessorTests: XCTestCase {
         XCTAssertFalse(outcome.passEvent)
     }
 
-    func testEventTapLifecycleReleasesPortsAndAutoreleasePools() {
+    func testCapturingShortcutSwallowsReservedCombosAndReturnsTheShortcut() {
+        var snapshot = ShortcutTapSnapshot()
+        snapshot.isCapturingShortcut = true
+        snapshot.isSwitcherVisible = true
+        let optionTab = ShortcutTapProcessor.handle(
+            type: .keyDown,
+            keyCode: 48,
+            flags: .maskAlternate,
+            characters: nil,
+            snapshot: &snapshot
+        )
+        let commandTab = ShortcutTapProcessor.handle(
+            type: .keyDown,
+            keyCode: 48,
+            flags: .maskCommand,
+            characters: nil,
+            snapshot: &snapshot
+        )
+
+        XCTAssertFalse(optionTab.passEvent)
+        XCTAssertEqual(
+            optionTab.capturedShortcut,
+            GlobalShortcut(keyCode: 48, modifiersRawValue: CGEventFlags.maskAlternate.rawValue)
+        )
+        XCTAssertFalse(commandTab.passEvent)
+        XCTAssertEqual(
+            commandTab.capturedShortcut,
+            GlobalShortcut(keyCode: 48, modifiersRawValue: CGEventFlags.maskCommand.rawValue)
+        )
+        XCTAssertNil(optionTab.action)
+        XCTAssertFalse(optionTab.probeRecognized)
+    }
+
+    func testCapturingShortcutPassesEscapeAndDeleteThroughToTheRecorder() {
+        var snapshot = ShortcutTapSnapshot()
+        snapshot.isCapturingShortcut = true
+        let escape = ShortcutTapProcessor.handle(
+            type: .keyDown,
+            keyCode: 53,
+            flags: .maskCommand,
+            characters: nil,
+            snapshot: &snapshot
+        )
+        let delete = ShortcutTapProcessor.handle(
+            type: .keyDown,
+            keyCode: 51,
+            flags: [],
+            characters: nil,
+            snapshot: &snapshot
+        )
+
+        XCTAssertTrue(escape.passEvent)
+        XCTAssertNil(escape.capturedShortcut)
+        XCTAssertTrue(delete.passEvent)
+        XCTAssertNil(delete.capturedShortcut)
+    }
+
+    func testClearedShortcutDoesNotOpenTheSwitcher() {
+        var snapshot = ShortcutTapSnapshot()
+        snapshot.shortcut = .none
+        let outcome = ShortcutTapProcessor.handle(
+            type: .keyDown,
+            keyCode: 0,
+            flags: [],
+            characters: nil,
+            snapshot: &snapshot
+        )
+
+        XCTAssertTrue(outcome.passEvent)
+        XCTAssertNil(outcome.action)
+        XCTAssertFalse(snapshot.isSwitcherVisible)
+    }
+
+    func testEventTapUsesSessionLocation() {
+        XCTAssertEqual(
+            ShortcutEventTapPlacement.locations,
+            [.cgSessionEventTap]
+        )
         XCTAssertTrue(ShortcutTapLifecycle.invalidatesEventTapOnStop())
         XCTAssertTrue(ShortcutTapLifecycle.drainsAutoreleasePoolPerEvent())
+        XCTAssertEqual(
+            ShortcutTapLifecycle.machPortTeardownOrder,
+            [.disableTap, .stopRunLoop, .removeSource, .invalidatePort]
+        )
     }
 }

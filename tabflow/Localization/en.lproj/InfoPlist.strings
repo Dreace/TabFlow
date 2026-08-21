@@ -1,1 +1,2 @@
+"NSInputMonitoringUsageDescription" = "TabFlow uses Input Monitoring to handle the global shortcut, including Command-Tab, while other apps are active.";
 "NSScreenCaptureUsageDescription" = "TabFlow captures window thumbnails to show previews in the switcher. Switching still works if you decline.";

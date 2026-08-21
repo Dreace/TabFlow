@@ -30,16 +30,13 @@ nonisolated enum OnboardingShortcutProbe {
     enum Status: Equatable {
         case waiting
         case succeeded
-        case conflict
         case unavailable
     }
 
     static func status(
-        hasSystemConflict: Bool,
         eventTapAvailable: Bool,
         didRecognizeShortcut: Bool
     ) -> Status {
-        if hasSystemConflict { return .conflict }
         if !eventTapAvailable { return .unavailable }
         if didRecognizeShortcut { return .succeeded }
         return .waiting
@@ -58,6 +55,7 @@ nonisolated struct ShortcutTapSnapshot: Sendable {
     var supportsArrowNavigation = true
     var keepsSwitcherOpenForSearchInput = false
     var isProbingShortcut = false
+    var isCapturingShortcut = false
     var shortcut = GlobalShortcut.defaultSwitcher
     var optionWasDown = false
 
@@ -74,6 +72,7 @@ nonisolated enum ShortcutTapProcessor {
         var passEvent: Bool
         var action: ShortcutAction?
         var probeRecognized = false
+        var capturedShortcut: GlobalShortcut?
     }
 
     static func handle(
@@ -85,6 +84,9 @@ nonisolated enum ShortcutTapProcessor {
     ) -> Outcome {
         guard !snapshot.isPaused else {
             return Outcome(passEvent: true, action: nil)
+        }
+        if snapshot.isCapturingShortcut {
+            return captureShortcut(type: type, keyCode: keyCode, flags: flags)
         }
 
         let primaryModifiers = snapshot.shortcut.eventFlags.subtracting(.maskShift)
@@ -115,7 +117,8 @@ nonisolated enum ShortcutTapProcessor {
             return Outcome(passEvent: true, action: nil)
         }
 
-        if keyCode == snapshot.shortcut.keyCode, primaryModifierDown {
+        if snapshot.shortcut.isConfigured,
+           keyCode == snapshot.shortcut.keyCode, primaryModifierDown {
             if snapshot.isProbingShortcut {
                 return Outcome(passEvent: false, action: nil, probeRecognized: true)
             }
@@ -154,26 +157,80 @@ nonisolated enum ShortcutTapProcessor {
         }
         return Outcome(passEvent: false, action: action)
     }
+
+    private static func captureShortcut(
+        type: CGEventType,
+        keyCode: Int64,
+        flags: CGEventFlags
+    ) -> Outcome {
+        guard type == .keyDown else {
+            return Outcome(passEvent: true, action: nil)
+        }
+        switch keyCode {
+        case 51, 53, 117:
+            return Outcome(passEvent: true, action: nil)
+        default:
+            break
+        }
+        guard let captured = GlobalShortcut.from(eventFlags: flags, keyCode: keyCode) else {
+            return Outcome(passEvent: true, action: nil)
+        }
+        return Outcome(passEvent: false, action: nil, capturedShortcut: captured)
+    }
 }
 
 nonisolated enum ShortcutTapLifecycle {
+    enum MachPortTeardownStep: Equatable {
+        case disableTap
+        case stopRunLoop
+        case removeSource
+        case invalidatePort
+    }
+
     static func invalidatesEventTapOnStop() -> Bool { true }
 
     static func drainsAutoreleasePoolPerEvent() -> Bool { true }
+
+    static var machPortTeardownOrder: [MachPortTeardownStep] {
+        [.disableTap, .stopRunLoop, .removeSource, .invalidatePort]
+    }
+}
+
+nonisolated enum ShortcutEventTapPlacement {
+    static var locations: [CGEventTapLocation] {
+        [.cgSessionEventTap]
+    }
 }
 
 @MainActor
 final class ShortcutEngine {
     weak var delegate: ShortcutEngineDelegate?
-    var isPaused = false { didSet { publishSnapshot() } }
+    var isPaused = false {
+        didSet {
+            publishSnapshot()
+            syncNativeCommandTabSuppression()
+        }
+    }
     var isSwitcherVisible = false { didSet { publishSnapshot() } }
     var confirmsOnModifierRelease = true { didSet { publishSnapshot() } }
     var confirmsWithReturn = true { didSet { publishSnapshot() } }
     var supportsArrowNavigation = true { didSet { publishSnapshot() } }
     var keepsSwitcherOpenForSearchInput = false { didSet { publishSnapshot() } }
     var isProbingShortcut = false { didSet { publishSnapshot() } }
+    var isCapturingShortcut = false {
+        didSet {
+            publishSnapshot()
+            syncNativeCommandTabSuppression()
+        }
+    }
     var onProbeRecognized: (() -> Void)?
-    var shortcut: GlobalShortcut = .defaultSwitcher { didSet { publishSnapshot() } }
+    var onShortcutCaptured: ((GlobalShortcut) -> Void)?
+    var shortcut: GlobalShortcut = .defaultSwitcher {
+        didSet {
+            publishSnapshot()
+            syncNativeCommandTabSuppression()
+        }
+    }
 
     var commitsOnModifierRelease: Bool {
         ModifierReleasePolicy.commitsSwitcher(
@@ -201,6 +258,7 @@ final class ShortcutEngine {
             snapshot.supportsArrowNavigation = supportsArrowNavigation
             snapshot.keepsSwitcherOpenForSearchInput = keepsSwitcherOpenForSearchInput
             snapshot.isProbingShortcut = isProbingShortcut
+            snapshot.isCapturingShortcut = isCapturingShortcut
             snapshot.shortcut = shortcut
             snapshot.optionWasDown = false
         }
@@ -215,6 +273,11 @@ final class ShortcutEngine {
                 self?.onProbeRecognized?()
             }
         }
+        context.capture = { [weak self] shortcut in
+            Task { @MainActor in
+                self?.onShortcutCaptured?(shortcut)
+            }
+        }
         context.availability = { [weak self] isAvailable in
             Task { @MainActor in
                 guard let self else { return }
@@ -223,30 +286,42 @@ final class ShortcutEngine {
         }
 
         let userInfo = Unmanaged.passUnretained(context).toOpaque()
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: shortcutEventCallback,
-            userInfo: userInfo
-        ) else {
+        if NativeCommandTabHotKey.shouldSuppress(
+            shortcut: shortcut,
+            isCapturing: isCapturingShortcut,
+            isTapRunning: true
+        ) {
+            NativeCommandTabHotKey.setEnabled(false)
+        }
+        guard let tap = createEventTap(mask: mask, userInfo: userInfo) else {
+            NativeCommandTabHotKey.setEnabled(true)
             delegate?.shortcutEngineDidChangeAvailability(self, isAvailable: false)
             throw ShortcutError.eventTapUnavailable
         }
 
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        let threadFinished = DispatchSemaphore(value: 0)
         context.eventTap = tap
         context.source = source
+        context.threadFinished = threadFinished
         tapContext = context
 
         let ready = DispatchSemaphore(value: 0)
         let thread = Thread {
+            if context.isCancelled {
+                threadFinished.signal()
+                return
+            }
             let runLoop = CFRunLoopGetCurrent()
             context.runLoop = runLoop
+            if context.isCancelled {
+                threadFinished.signal()
+                return
+            }
             CFRunLoopAddSource(runLoop, source, .commonModes)
             ready.signal()
             CFRunLoopRun()
+            threadFinished.signal()
         }
         thread.name = "com.dreace.tabflow.event-tap"
         thread.qualityOfService = .userInteractive
@@ -259,24 +334,66 @@ final class ShortcutEngine {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        syncNativeCommandTabSuppression()
         delegate?.shortcutEngineDidChangeAvailability(self, isAvailable: true)
     }
 
     func stop() {
-        guard let context = tapContext else { return }
+        guard let context = tapContext else {
+            NativeCommandTabHotKey.setEnabled(true)
+            return
+        }
         context.deliver = nil
         context.probe = nil
+        context.capture = nil
         context.availability = nil
+        context.isCancelled = true
         if let eventTap = context.eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
-            CFMachPortInvalidate(eventTap)
         }
+        if let runLoop = context.runLoop {
+            CFRunLoopStop(runLoop)
+            CFRunLoopWakeUp(runLoop)
+        }
+        _ = context.threadFinished?.wait(timeout: .now() + 1)
         if let source = context.source, let runLoop = context.runLoop {
             CFRunLoopRemoveSource(runLoop, source, .commonModes)
-            CFRunLoopStop(runLoop)
+        }
+        if let eventTap = context.eventTap {
+            CFMachPortInvalidate(eventTap)
         }
         tapContext = nil
         tapThread = nil
+        NativeCommandTabHotKey.setEnabled(true)
+    }
+
+    private func createEventTap(
+        mask: CGEventMask,
+        userInfo: UnsafeMutableRawPointer
+    ) -> CFMachPort? {
+        for location in ShortcutEventTapPlacement.locations {
+            if let tap = CGEvent.tapCreate(
+                tap: location,
+                place: .headInsertEventTap,
+                options: .defaultTap,
+                eventsOfInterest: mask,
+                callback: shortcutEventCallback,
+                userInfo: userInfo
+            ) {
+                return tap
+            }
+        }
+        return nil
+    }
+
+    private func syncNativeCommandTabSuppression() {
+        NativeCommandTabHotKey.setEnabled(
+            !NativeCommandTabHotKey.shouldSuppress(
+                shortcut: shortcut,
+                isCapturing: isCapturingShortcut,
+                isTapRunning: tapContext != nil
+            )
+        )
     }
 
     private func publishSnapshot() {
@@ -288,6 +405,7 @@ final class ShortcutEngine {
             snapshot.supportsArrowNavigation = supportsArrowNavigation
             snapshot.keepsSwitcherOpenForSearchInput = keepsSwitcherOpenForSearchInput
             snapshot.isProbingShortcut = isProbingShortcut
+            snapshot.isCapturingShortcut = isCapturingShortcut
             snapshot.shortcut = shortcut
         }
     }
@@ -299,8 +417,11 @@ private final class ShortcutTapContext: @unchecked Sendable {
     var eventTap: CFMachPort?
     var source: CFRunLoopSource?
     var runLoop: CFRunLoop?
+    var threadFinished: DispatchSemaphore?
+    var isCancelled = false
     var deliver: (@Sendable (ShortcutAction) -> Void)?
     var probe: (@Sendable () -> Void)?
+    var capture: (@Sendable (GlobalShortcut) -> Void)?
     var availability: (@Sendable (Bool) -> Void)?
 
     func publish(_ update: (inout ShortcutTapSnapshot) -> Void) {
@@ -343,6 +464,9 @@ private final class ShortcutTapContext: @unchecked Sendable {
 
         if outcome.probeRecognized {
             probe?()
+        }
+        if let capturedShortcut = outcome.capturedShortcut {
+            capture?(capturedShortcut)
         }
         if let action = outcome.action {
             deliver?(action)

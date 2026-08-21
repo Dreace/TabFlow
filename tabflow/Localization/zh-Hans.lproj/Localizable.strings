@@ -45,9 +45,11 @@
 "overlay.keyboardHint.searchField" = "Tab 切换    Shift+Tab 返回    Return 确认    Esc 取消";
 "overlay.keyboardHint.searchField.accessibility" = "按 Tab 选择下一项，按 Shift Tab 返回，按 Return 确认，按 Esc 取消。";
 
-"shortcut.recording" = "请按快捷键…";
+"shortcut.recording" = "请按快捷键";
 "shortcut.recorder.accessibility" = "全局快捷键录制框";
+"shortcut.recorder.help" = "点击后按下快捷键。Esc 取消录入，Delete 清空。";
 "shortcut.keyCode.format" = "按键 %lld";
+"shortcut.none" = "未设置";
 
 "permissions.accessibility" = "辅助功能";
 "permissions.input" = "输入监控";
@@ -89,7 +91,15 @@
 "settings.shortcuts.confirmWithReturn" = "允许 Return 确认";
 "settings.shortcuts.escape" = "Esc 取消";
 "settings.shortcuts.arrows" = "使用方向键切换";
-"settings.shortcuts.systemConflict" = "该快捷键与 macOS 保留快捷键冲突，请选择其他组合。";
+"settings.shortcuts.conflict.none" = "无已知冲突";
+"settings.shortcuts.conflict.appSwitcher" = "macOS 通常使用此快捷键进行应用切换。";
+"settings.shortcuts.conflict.spotlight" = "macOS 通常使用此快捷键打开聚焦搜索。";
+"settings.shortcuts.conflict.missionControl" = "macOS 通常使用此快捷键打开调度中心。";
+"settings.shortcuts.conflict.appExpose" = "macOS 通常使用此快捷键显示 App Exposé。";
+"settings.shortcuts.conflict.spaceLeft" = "macOS 通常使用此快捷键向左切换空间。";
+"settings.shortcuts.conflict.spaceRight" = "macOS 通常使用此快捷键向右切换空间。";
+"settings.shortcuts.conflict.registeredElsewhere" = "这个快捷键可能已被其他应用注册。";
+"settings.shortcuts.conflict.tabFlow.format" = "该快捷键已用于%@。";
 "settings.shortcuts.availabilityUnknown" = "全局监听当前不可用，暂时无法验证此快捷键。";
 
 "settings.appearance.layout" = "布局模式";
@@ -183,7 +193,6 @@
 "onboarding.shortcut.description" = "请按一次 Option+Tab，确认全局快捷键可用。设置完成后，同时按 Shift 可反向切换。";
 "onboarding.shortcut.waiting" = "等待按下快捷键…";
 "onboarding.shortcut.succeeded" = "已识别快捷键";
-"onboarding.shortcut.conflict" = "该快捷键与系统保留组合冲突，请改用其他组合。";
 "onboarding.shortcut.unavailable" = "全局快捷键目前不可用。请检查输入监控权限后重试。";
 "onboarding.shortcut.retest" = "重新测试";
 "onboarding.thumbnails.title" = "窗口预览是可选功能";

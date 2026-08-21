@@ -20,6 +20,7 @@ struct OnboardingView: View {
     @Bindable var permissions: PermissionManager
     @Bindable var shortcutProbe: ShortcutProbeState
     let onShortcutProbeActive: (Bool) -> Void
+    let onShortcutRecordingChange: (Bool) -> Void
     let onComplete: () -> Void
     let onOpenSettings: () -> Void
 
@@ -68,6 +69,7 @@ struct OnboardingView: View {
             shortcutProbe.recognized = false
         }
         .onDisappear {
+            onShortcutRecordingChange(false)
             onShortcutProbeActive(false)
         }
     }
@@ -133,8 +135,16 @@ struct OnboardingView: View {
                 .font(.system(size: 30, weight: .semibold, design: .rounded))
             Label(shortcutStatusText(status), systemImage: shortcutStatusSymbol(status))
                 .foregroundStyle(shortcutStatusTint(status))
-            ShortcutRecorder(shortcut: $settings.shortcut)
+            ShortcutRecorder(
+                shortcut: $settings.shortcut,
+                onRecordingChange: onShortcutRecordingChange
+            )
                 .frame(width: 170)
+            if case let .knownSystem(reason) = ShortcutConflictDetector.conflict(for: settings.shortcut) {
+                Label(reason, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+            }
             HStack {
                 Button("onboarding.shortcut.retest") {
                     shortcutProbe.recognized = false
@@ -151,7 +161,6 @@ struct OnboardingView: View {
 
     private var shortcutProbeStatus: OnboardingShortcutProbe.Status {
         OnboardingShortcutProbe.status(
-            hasSystemConflict: settings.shortcut.hasKnownSystemConflict,
             eventTapAvailable: permissions.eventTapAvailable,
             didRecognizeShortcut: shortcutProbe.recognized
         )
@@ -191,7 +200,6 @@ struct OnboardingView: View {
         switch status {
         case .waiting: String(localized: "onboarding.shortcut.waiting")
         case .succeeded: String(localized: "onboarding.shortcut.succeeded")
-        case .conflict: String(localized: "onboarding.shortcut.conflict")
         case .unavailable: String(localized: "onboarding.shortcut.unavailable")
         }
     }
@@ -200,7 +208,6 @@ struct OnboardingView: View {
         switch status {
         case .waiting: "keyboard"
         case .succeeded: "checkmark.circle.fill"
-        case .conflict: "exclamationmark.triangle.fill"
         case .unavailable: "xmark.circle.fill"
         }
     }
@@ -209,7 +216,7 @@ struct OnboardingView: View {
         switch status {
         case .waiting: .secondary
         case .succeeded: .green
-        case .conflict, .unavailable: .orange
+        case .unavailable: .orange
         }
     }
 

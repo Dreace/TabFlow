@@ -49,6 +49,10 @@ final class AppCoordinator: NSObject {
         shortcutEngine.onProbeRecognized = { [weak self] in
             self?.shortcutProbe.recognized = true
         }
+        shortcutEngine.onShortcutCaptured = { [weak self] shortcut in
+            self?.settings.shortcut = shortcut
+            self?.shortcutEngine.isCapturingShortcut = false
+        }
         UNUserNotificationCenter.current().delegate = self
         switcher.onVisibilityChange = { [weak self] isVisible in
             self?.shortcutEngine.isSwitcherVisible = isVisible
@@ -160,6 +164,7 @@ final class AppCoordinator: NSObject {
             NotificationCenter.default.removeObserver(permissionRefreshObserver)
             self.permissionRefreshObserver = nil
         }
+        shortcutEngine.isCapturingShortcut = false
         shortcutEngine.isProbingShortcut = false
         shortcutEngine.stop()
         windowRefreshTask?.cancel()
@@ -354,6 +359,7 @@ final class AppCoordinator: NSObject {
         }
         do {
             try shortcutEngine.start()
+            requestInputMonitoringIfNeeded()
         } catch {
             permissions.setEventTapAvailable(false)
             requestInputMonitoringIfNeeded()
@@ -482,6 +488,9 @@ final class AppCoordinator: NSObject {
                         await self?.thumbnailService.clearCache()
                     }
                     self?.overlayController.clearThumbnails()
+                },
+                onShortcutRecordingChange: { [weak self] isRecording in
+                    self?.shortcutEngine.isCapturingShortcut = isRecording
                 }
             )
             let rootView = SettingsRootView(model: viewModel)
@@ -556,8 +565,12 @@ final class AppCoordinator: NSObject {
             onShortcutProbeActive: { [weak self] isActive in
                 self?.shortcutEngine.isProbingShortcut = isActive
             },
+            onShortcutRecordingChange: { [weak self] isRecording in
+                self?.shortcutEngine.isCapturingShortcut = isRecording
+            },
             onComplete: { [weak self] in
                 self?.shortcutEngine.isProbingShortcut = false
+                self?.shortcutEngine.isCapturingShortcut = false
                 self?.onboardingWindowController?.close()
                 self?.onboardingWindowController = nil
             },
